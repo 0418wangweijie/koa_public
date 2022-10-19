@@ -1,0 +1,8 @@
+{
+  "name": "koa_public",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/0418wangweijie/koa_public.git",
+  "author": "王伟杰 <zhangweijie@1913627983540668.onaliyun.com>",
+  "license": "MIT"
+}
