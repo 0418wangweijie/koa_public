@@ -1,11 +1,6 @@
-const koa = require('koa')
+const {APP_PORT} = require('./config/config.default')
 
-const app = new koa()
-
-app.use(async (ctx,next)=>{
-    ctx.body = 'hello api'
-})
-
-app.listen(3000,()=>{
-    console.log('service is running on http://localhost:3000')
+const  app = require('./app/index')
+app.listen(APP_PORT, () => {
+    console.log(`service is running on http://localhost:${APP_PORT}`)
 })
