@@ -33,11 +33,11 @@ const koa = require('koa')
 
 const app = new koa()
 
-app.use(async (ctx,next)=>{
+app.use(async (ctx, next) => {
     ctx.body = 'hello api'
 })
 
-app.listen(3000,()=>{
+app.listen(3000, () => {
     console.log('service is running on http://localhost:3000')
 })
 ```
@@ -61,9 +61,11 @@ yarn add nodemon
 ### 编写package.json脚本
 
 ```json
-"scripts": {
+{
+  "scripts": {
     "dev": "nodemon ./src/main.js"
-  },
+  }
+}
 ```
 
 ## 读取配置文件
@@ -165,8 +167,9 @@ register(ctx, next)
     ctx.body = '用户注册'
 }
 ```
-- 拆分service层
-    创建service文件夹
+
+- 拆分service层 创建service文件夹
+
 ```js
 class UserService {
     async createUser(user_name, password) {
@@ -178,3 +181,166 @@ class UserService {
 module.exports = new UserService()
 ```
 
+# 数据库操作
+
+- sequelize ORM``对象关系映射`` 数据库
+
+```http request
+https://www.sequelize.cn/
+```
+
+ORM：对象关系映射 - 数据表映射一个类 - 数据表中的数据行（记录）对应一个对象 - 数据表的字段对应对象的属性 - 数据表的操作对应对象的方法
+
+- 安装sequelize
+
+```puml
+yarn add sequelize
+yarn add mysql2
+```
+
+- 连接数据库
+  ``src/db/seq.js``
+
+```js
+const {Sequelize} = require('sequelize')
+const {MYSQL_ROPT, MYSQL_USER, MYSQL_PWD, MYSQL_DB, MYSQL_HOST} = require('../config/config.default')
+
+const sequelize = new Sequelize(MYSQL_DB, MYSQL_USER, MYSQL_PWD, {
+    host: MYSQL_HOST,
+    dialect: 'mysql'
+})
+
+module.exports = sequelize
+```
+
+- 编写配置文件
+
+```puml
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PWD=wang0418
+MYSQL_DB=koa-js
+```
+
+# 创建表
+
+- sequence 主要通过Model对应数据表 创建src/model/user.model.js
+
+```js
+const {DataType, DataTypes} = require('sequelize')
+
+const sequelize = require('../db/seq')
+
+// 创建模型 对应数据表 js_users
+const User = sequelize.define('user', {
+    user_name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+        commit: '用户名，唯一'
+    },
+    password: {
+        type: DataTypes.CHAR(64),
+        allowNull: false,
+        commit: '密码'
+    },
+    is_admin: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: 0,
+        commit: '是否是管理员，1是，0不是'
+    }
+}, {
+    tableName: 'user',
+    // 是否生成时间戳
+    // timestamps: false
+})
+// 创建表   force 强制同步数据库
+// User.sync({force: true})
+```
+
+# 创建数据
+
+- 在service层添加创建用户数据操作
+
+```js
+ async
+createUser(user_name, password)
+{
+    console.log(user_name, password)
+    // todo 写入数据库
+    // await 表达式： promise对象的值
+    // const response = await User.create({user_name, password})
+    return await User.create({user_name, password})
+}
+```
+
+# 错误处理
+
+- code码规范统一，创建``code.response.js``做code统一管理和数据返回
+
+```js
+const SuccessResponse = {code: 10000, message: '请求成功'}
+ErrorResponse = {code: 10001, message: '请求失败'}
+ErrorConflictResponse = {code: 10002, message: '存在冲突'}
+
+class Response {
+    async SuccessResponse(data) {
+        let response = SuccessResponse
+        response.data = data
+        return response
+    }
+
+    async ErrorResponse(message) {
+        let response = ErrorResponse
+        response.message = message || ErrorResponse.message
+        return response
+    }
+
+    async ErrorConflictResponse(message) {
+        let response = ErrorResponse
+        response.message = message || ErrorResponse.message
+        return response
+    }
+}
+
+module.exports = new Response()
+```
+
+- 在http请求码做统一处理在 ``http/status.js``
+
+```js
+const http = {
+    STATUSOK: 200,
+
+    STATUSBADREQUEST: 400,
+    STATUSFORBIDDEN: 403,
+    STATUSCONFLICT: 409,
+
+    STATUSINTERNALSERVERERROR: 500
+}
+module.exports = http
+```
+
+- 错误逻辑处理需要再``controller``层进行处理
+
+```js
+if (!user_name || !password) {
+    console.error('用户名或密码为空：', ctx.request.body)
+    ctx.status = http.STATUSBADREQUEST
+    ctx.body = await ErrorResponse('密码或用户名为空')
+    return
+}
+if (getUserInfo({user_name})) {
+    ctx.status = http.STATUSCONFLICT
+    ctx.body = await ErrorConflictResponse('用户已存在')
+    return
+}
+```
+# 拆分中间件
+# 用户登录
+- 登录用户查询
+- 登录用户密码校验
+# 用户认证
+jwt：jsonwebtoken
